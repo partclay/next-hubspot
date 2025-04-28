@@ -1,63 +1,99 @@
-import React, { createContext, useContext, useMemo, useState, useDebugValue } from "react";
+"use client";
+
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  useDebugValue,
+  useCallback,
+} from "react";
 import NextScript from "next/script.js";
 import type { ScriptProps } from "next/script.js";
-import { useIsHubspotLoaded } from "./useIsHubspotLoaded.js";
+
+export const HUBSPOT_LOADED_EVENT = "hubspot_loaded";
 
 // https://github.com/vercel/next.js/issues/46078
 const Script = NextScript as unknown as React.FC<ScriptProps>;
 
-interface HubspotContextProps {
-  /** Is Hubspot script loaded */
-  readonly loaded: boolean;
-  /** Is Hubspot failed to load */
-  readonly error: boolean;
+export interface HubspotContextProps {
+  /** If `true`, Hubspot script has been loaded */
+  readonly isScriptLoaded: boolean;
+  /** If `true`, an error occurred while loading Hubspot script */
+  readonly isScriptError: boolean;
+  /** Error received while loading Hubspot script */
+  readonly scriptError: Error | null;
 }
 
-const HubspotContext = createContext<HubspotContextProps>({
-  loaded: false,
-  error: false,
+export const HubspotContext = createContext<HubspotContextProps>({
+  isScriptLoaded: false,
+  isScriptError: false,
+  scriptError: null,
 });
 
-const useHubspotContext = () => {
+export const useHubspotContext = () => {
   const values = useContext(HubspotContext);
-  useDebugValue(`Hubspot Script: ${values?.loaded ? "Loaded" : "Not Loaded"}`);
-  useDebugValue(`Failed to load Script: ${values?.error ? "Yes" : "No"}`);
+  useDebugValue(`isScriptLoaded: ${String(values.isScriptLoaded)}`);
+  useDebugValue(`isScriptError: ${String(values.isScriptError)}`);
+  useDebugValue(`scriptError: ${values.scriptError}`);
   return values;
 };
 
-interface HubspotProviderProps extends Partial<ScriptProps> {
+export interface HubspotProviderProps extends Partial<ScriptProps> {
   children?: React.ReactNode;
 }
 
 /** Loads Hubspot script to the document and syncs loading state between forms on the page */
-const HubspotProvider: React.FC<HubspotProviderProps> = ({
+export const HubspotProvider: React.FC<HubspotProviderProps> = ({
   children,
-  id = "hubspotScript",
-  src = "https://js.hsforms.net/forms/v2.js",
+
   strategy = "afterInteractive",
+
+  src: passedSrc,
+  onReady: passedOnReady,
+  onError: passedOnError,
+
   ...props
 }) => {
-  const loaded = useIsHubspotLoaded();
-  const [error, setError] = useState(false);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const [scriptError, setScriptError] = useState<Error | null>(null);
 
-  // Reset state when script src is changed
-  // Related: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  const [prevSrc, setSrc] = useState(src);
-  if (src !== prevSrc) {
-    setSrc(src);
-    setError(false);
-  }
+  const isScriptError = !!scriptError;
+
+  const src = passedSrc || "https://js.hsforms.net/forms/v2.js";
+
+  // Handle script load
+  const onReady = useCallback(() => {
+    setScriptError(null);
+    setIsScriptLoaded(true);
+    window.dispatchEvent(new Event(HUBSPOT_LOADED_EVENT));
+    passedOnReady?.();
+  }, [passedOnReady]);
+
+  // Handle script error
+  const onError = useCallback(
+    (e: Error) => {
+      console.error("HubSpot script failed to load:", e);
+      setScriptError(e);
+      passedOnError?.(e);
+    },
+    [passedOnError],
+  );
 
   // Prevent unnecessary rerenders
-  const value = useMemo(() => ({ loaded, error }), [loaded, error]);
+  const value: HubspotContextProps = useMemo(
+    () => ({
+      isScriptLoaded,
+      isScriptError,
+      scriptError,
+    }),
+    [isScriptLoaded, isScriptError, scriptError],
+  );
 
   return (
     <HubspotContext.Provider value={value}>
       {children}
-      <Script id={id} src={src} strategy={strategy} {...props} />
+      <Script src={src} strategy={strategy} onReady={onReady} onError={onError} {...props} />
     </HubspotContext.Provider>
   );
 };
-
-export { HubspotContext, useHubspotContext, HubspotProvider };
-export type { HubspotContextProps, HubspotProviderProps };

@@ -1,4 +1,5 @@
 // TODO: Improve types
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 /** Unknown function */
 type ƒ = (...args: unknown[]) => unknown;
