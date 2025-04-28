@@ -2,7 +2,10 @@
   "name": "next-hubspot",
   "version": "2.0.0-beta.0",
   "description": "Hubspot forms in Next.js with no headache",
-  "repository": "https://github.com/snelsi/next-hubspot",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snelsi/next-hubspot.git"
+  },
   "license": "MIT",
   "keywords": [
     "hubspot",
