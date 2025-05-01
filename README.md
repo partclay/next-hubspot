@@ -18,13 +18,19 @@ Embed HubSpot forms into your Next.js application using hooks.
 ## Install
 
 ```ssh
-yarn add next-hubspot
+npm install next-hubspot
 ```
 
 or
 
 ```ssh
-npm install --save next-hubspot
+pnpm add next-hubspot
+```
+
+or
+
+```ssh
+yarn add next-hubspot
 ```
 
 ## Pure ESM package
@@ -53,7 +59,7 @@ const MyApp = ({ Component, pageProps }) => (
 import { useHubspotForm } from 'next-hubspot';
 
 const HubspotForm = () => {
-    const { loaded, error, formCreated } = useHubspotForm({
+    const { isFormCreated, isError, error } = useHubspotForm({
         portalId: 'XXXXXXX',
         formId: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
         target: '#hubspot-form-wrapper'
